@@ -514,11 +514,39 @@ function _M.table_contains(arr, val)
   return false
 end
 
+
+do
+  local ok, is_array = pcall(require, "table.isarray")
+  if not ok then
+    local floor = math.floor
+    is_array = function(t)
+      for k in pairs(t) do
+          if type(k) ~= "number" or k < 1 or floor(k) ~= k then
+            return false
+          end
+      end
+      return true
+    end
+  end
+
+  --- Checks if a table is an array and not an associative array.
+  -- @param t The table to check
+  -- @return Returns `true` if the table is an array, `false` otherwise
+  function _M.is_array(t)
+    if type(t) ~= "table" then
+      return false
+    end
+
+    return is_array(t)
+  end
+end
+
+
 --- Checks if a table is an array and not an associative array.
 -- *** NOTE *** string-keys containing integers are considered valid array entries!
 -- @param t The table to check
 -- @return Returns `true` if the table is an array, `false` otherwise
-function _M.is_array(t)
+function _M.is_lapis_array(t)
   if type(t) ~= "table" then
     return false
   end
@@ -531,6 +559,7 @@ function _M.is_array(t)
   end
   return true
 end
+
 
 --- Deep copies a table into a new table.
 -- Tables used as keys are also deep copied, as are metatables

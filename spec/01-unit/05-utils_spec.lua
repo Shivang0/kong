@@ -391,11 +391,30 @@ describe("Utils", function()
     describe("is_array()", function()
       it("should know when an array ", function()
         assert.True(utils.is_array({ "a", "b", "c", "d" }))
-        assert.True(utils.is_array({ ["1"] = "a", ["2"] = "b", ["3"] = "c", ["4"] = "d" }))
+        assert.True(utils.is_array({ "a", "b", nil, "c", "d" }))
+        assert.True(utils.is_array({ [1] = "a", [2] = "b", [3] = "c", [4] = "d" }))
+        assert.True(utils.is_array({ [1] = "a", [2] = "b", nil, [3] = "c", [4] = "d" })) --luacheck: ignore
+        assert.True(utils.is_array({ [1] = "a", [2] = "b", nil, [4] = "c", [5] = "d" })) --luacheck: ignore
+        assert.False(utils.is_array({ ["1"] = "a", ["2"] = "b", ["3"] = "c", ["4"] = "d" }))
         assert.False(utils.is_array({ "a", "b", "c", foo = "d" }))
         assert.False(utils.is_array())
         assert.False(utils.is_array(false))
         assert.False(utils.is_array(true))
+      end)
+    end)
+
+    describe("is_lapis_array()", function()
+      it("should know when an array ", function()
+        assert.True(utils.is_lapis_array({ "a", "b", "c", "d" }))
+        assert.False(utils.is_lapis_array({ "a", "b", nil, "c", "d" }))
+        assert.True(utils.is_lapis_array({ [1] = "a", [2] = "b", [3] = "c", [4] = "d" }))
+        assert.False(utils.is_lapis_array({ [1] = "a", [2] = "b", nil, [3] = "c", [4] = "d" })) --luacheck: ignore
+        assert.False(utils.is_lapis_array({ [1] = "a", [2] = "b", nil, [4] = "c", [5] = "d" })) --luacheck: ignore
+        assert.True(utils.is_lapis_array({ ["1"] = "a", ["2"] = "b", ["3"] = "c", ["4"] = "d" }))
+        assert.False(utils.is_lapis_array({ "a", "b", "c", foo = "d" }))
+        assert.False(utils.is_lapis_array())
+        assert.False(utils.is_lapis_array(false))
+        assert.False(utils.is_lapis_array(true))
       end)
     end)
 
