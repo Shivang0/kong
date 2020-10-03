@@ -163,26 +163,27 @@ local function communicate(premature, conf)
   -- connection established
   local reconnect
   local ping_thread = ngx.thread.spawn(function()
-    while not exiting() and not c.fatal do
+    while not exiting() and not c.fatal and not reconnect do
       if not send_ping(c) then
         if c.fatal then
-          reconnect = true
-          return
+          goto reconnect
         end
       end
 
       for _ = 1, PING_INTERVAL do
         ngx_sleep(1)
-        if exiting() or c.fatal then
-          reconnect = true
-          return
+        if exiting() or c.fatal or reconnect then
+          goto reconnect
         end
       end
     end
+
+    ::reconnect::
+    reconnect = true
   end)
 
   local update_config_thread = ngx.thread.spawn(function()
-    while not exiting() and not c.fatal do
+    while not exiting() and not c.fatal and not reconnect do
       local ok, err = update_config_semaphore:wait(1)
       if ok then
         local config_table = next_config
@@ -207,15 +208,17 @@ local function communicate(premature, conf)
         ngx_log(ngx_ERR, "semaphore wait error: ", err)
       end
     end
+
+    reconnect = true
   end)
 
   -- main dp loop
-  while not exiting() and not c.fatal do
+  while not exiting() and not c.fatal and not reconnect do
     local data, typ, err = c:recv_frame()
     if err then
       if c.fatal then
         ngx.log(ngx.ERR, "error while receiving frame from control plane: ", err)
-        reconnect = true
+        break
       end
 
     else
@@ -243,29 +246,25 @@ local function communicate(premature, conf)
         ngx_log(ngx_DEBUG, "received PONG frame from control plane")
 
       elseif typ == "close" then
-        reconnect = true
+        break
       end
     end
+  end
 
-    if reconnect then
-      ngx.thread.kill(ping_thread)
-      ngx.thread.kill(update_config_thread)
+  ngx.thread.kill(ping_thread)
+  ngx.thread.kill(update_config_thread)
 
-      if not c.fatal then
-        c:send_close()
-      end
+  if not c.fatal then
+    c:send_close()
+  end
 
-      if c.close then
-        c:close()
-      end
+  if c.close then
+    c:close()
+  end
 
-      if not exiting() then
-        local delay = 9 + math.random()
-        assert(ngx.timer.at(delay, communicate, conf))
-      end
-
-      return
-    end
+  if not exiting() then
+    local delay = 9 + math.random()
+    assert(ngx.timer.at(delay, communicate, conf))
   end
 end
 
